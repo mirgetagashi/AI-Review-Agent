@@ -20,6 +20,9 @@
 #   bash scripts/sandbox-run.sh <repo-dir> <command...>
 #   bash scripts/sandbox-run.sh work/detyra-sudoku python main.py
 #
+# The image is built from sandbox/Dockerfile, which pre-installs the packages in
+# sandbox/requirements.txt (docker build -t ai-review-sandbox sandbox/).
+#
 # Exit codes (consumed by the Reviewer when scoring 'functionality'):
 #   0  ran and exited cleanly            -> evidence FOR functionality
 #   1  ran and exited non-zero           -> evidence AGAINST functionality
@@ -30,7 +33,10 @@
 
 set -uo pipefail
 
-IMAGE="${SANDBOX_IMAGE:-python:3.12-slim}"
+ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+OWN_IMAGE=ai-review-sandbox
+FALLBACK_IMAGE=python:3.12-slim
+IMAGE="${SANDBOX_IMAGE:-$OWN_IMAGE}"
 TIMEOUT="${SANDBOX_TIMEOUT:-30}"
 MEMORY="${SANDBOX_MEMORY:-256m}"
 CPUS="${SANDBOX_CPUS:-0.5}"
@@ -44,6 +50,15 @@ REPO="$1"; shift
 
 if [[ ! -d "$REPO" ]]; then
   echo "sandbox: '$REPO' is not a directory" >&2
+  exit 64
+fi
+
+# Only a clone under work/ may be mounted, resolved through symlinks: mounting
+# the project root or a home directory would hand the student's code our files.
+ABS_REPO="$(cd -P "$REPO" && pwd -P)"
+WORK="$(cd -P "$ROOT/work" 2>/dev/null && pwd -P)"
+if [[ -z "$WORK" || "$ABS_REPO" != "$WORK"/* ]]; then
+  echo "sandbox: only directories inside work/ may run, not '$REPO'" >&2
   exit 64
 fi
 
@@ -64,11 +79,44 @@ if ! docker info >/dev/null 2>&1; then
   exit 2
 fi
 
+PREINSTALLED=""
+if [[ "$IMAGE" == "$OWN_IMAGE" ]]; then
+  if docker image inspect "$OWN_IMAGE" >/dev/null 2>&1; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line%%#*}"
+      line="${line//[[:space:]]/}"
+      [[ -n "$line" ]] && PREINSTALLED+="$(printf '%s' "${line%%[<>=!~]*}" | tr 'A-Z_' 'a-z-')"$'\n'
+    done < "$ROOT/sandbox/requirements.txt"
+  else
+    echo "sandbox: image '$OWN_IMAGE' is not built, falling back to $FALLBACK_IMAGE without packages." >&2
+    echo "Build it with: docker build -t $OWN_IMAGE sandbox/" >&2
+    IMAGE="$FALLBACK_IMAGE"
+  fi
+fi
+
+# requirements_preinstalled <file>: every package it names is already in the
+# image. Versions are not compared; -r, -e and index options are refused.
+requirements_preinstalled() {
+  local line name
+  [[ -n "$PREINSTALLED" ]] || return 1
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"
+    line="${line//[[:space:]]/}"
+    [[ -z "$line" ]] && continue
+    [[ "$line" == -* ]] && return 1
+    name="$(printf '%s' "${line%%[<>=!~;[]*}" | tr 'A-Z_' 'a-z-')"
+    grep -qxF -- "$name" <<<"$PREINSTALLED" || return 1
+  done < "$1"
+}
+
 # Dependencies cannot be fetched inside a network-less container. Detect the
 # case explicitly instead of letting it surface as an import error that looks
 # like broken student code.
 if [[ -z "${SANDBOX_DEPS_PRESTAGED:-}" ]]; then
   for manifest in requirements.txt Pipfile pyproject.toml package.json go.mod Cargo.toml pom.xml; do
+    if [[ "$manifest" == requirements.txt && -f "$REPO/$manifest" ]] && requirements_preinstalled "$REPO/$manifest"; then
+      continue
+    fi
     if [[ -f "$REPO/$manifest" ]]; then
       vendored=0
       for d in "$REPO/node_modules" "$REPO/vendor" "$REPO/.venv" "$REPO/venv"; do
@@ -77,16 +125,13 @@ if [[ -z "${SANDBOX_DEPS_PRESTAGED:-}" ]]; then
       if [[ "$vendored" == 0 ]]; then
         echo "DEPS_UNAVAILABLE: ${manifest} declares external dependencies and the" >&2
         echo "sandbox has no network, so they cannot be installed." >&2
-        echo "Score functionality UNVERIFIABLE, not 0. To grade it, pre-stage the" >&2
-        echo "dependencies in a custom image and set SANDBOX_IMAGE +" >&2
-        echo "SANDBOX_DEPS_PRESTAGED=1." >&2
+        echo "Score functionality UNVERIFIABLE, not 0. To grade it, add the packages to" >&2
+        echo "sandbox/requirements.txt and rebuild the image." >&2
         exit 3
       fi
     fi
   done
 fi
-
-ABS_REPO="$(cd "$REPO" && pwd)"
 
 # --network none        no exfiltration, no downloads
 # --read-only           immutable root filesystem

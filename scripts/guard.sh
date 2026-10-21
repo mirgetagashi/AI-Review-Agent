@@ -158,9 +158,8 @@ DENY=(
   # find's execution, deletion and file-writing actions, anchored as whole flags:
   # unanchored, '-ok' also matched repository names such as 'john-oklahoma'.
   '(^|[[:space:]])-(exec|execdir|delete|ok|okdir|fprint|fprint0|fprintf|fls)([[:space:]]|$)'
-  # flags that make an allowlisted reader run a program or write a file:
-  # rg --pre, sort --compress-program, git diff/log --output, jscpd --output
-  '--pre(-glob)?([[:space:]=]|$)|--compress-program|--output([[:space:]=]|$)'
+  # flags that make an allowlisted reader run a program (--output is vetted per command below)
+  '--pre(-glob)?([[:space:]=]|$)|--compress-program'
   # following symlinks while recursing would read whatever a student link targets
   '(^|[[:space:]])(-R|-L|-follow|--follow|--dereference-recursive)([[:space:]]|$)'
   # gh api is allowed below for GitHub metadata, read-only: these flags turn it
@@ -361,6 +360,13 @@ vet_segment() {
     case "${words[i]}" in
       --out|--out-dir) target="${words[i+1]}" ;;
       --out=*|--out-dir=*) target="${words[i]#*=}" ;;
+      # only jscpd may choose where its report goes; git diff/log --output writes any file
+      --output|--output=*)
+        [[ "${words[0]}" == jscpd ]] || block "--output writes a file: '${text}'" "$CMD"
+        [[ "${words[i]}" == --output=* ]] && target="${words[i]#*=}" || target="${words[i+1]}" ;;
+      -o)
+        [[ "${words[0]}" == jscpd ]] || continue
+        target="${words[i+1]}" ;;
       *) continue ;;
     esac
     path_ok "$target" "$WORK_P" "$REPORTS_P" || block "output outside work/ or reports/: '${target}'" "$CMD"

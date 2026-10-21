@@ -212,6 +212,30 @@ guard_case "agent-chosen sandbox image"            'SANDBOX_IMAGE=attacker/img b
 guard_case "sandbox on a directory outside work/"  'bash scripts/sandbox-run.sh /home python x'                  block
 guard_case "sandbox on reports/"                   'bash scripts/sandbox-run.sh reports/x python x'             block
 
+echo "guard.sh - only jscpd may choose an output file"
+guard_case "jscpd report into reports/"            'jscpd work/x --config config/jscpd.json --output reports/x/jscpd' allow
+guard_case "jscpd report outside reports/"         'jscpd work/x --output scripts'                              block
+guard_case "jscpd -o outside reports/"             'jscpd work/x -o .claude'                                    block
+guard_case "grep -o is not an output file"         'grep -o import work/x/a.py'                                 allow
+
+echo "sandbox-run.sh - mounts only clones under work/"
+# sandbox_case <name> <repo-dir> <expected exit (64) | not64>
+sandbox_case() {
+  local name="$1" dir="$2" want="$3" status
+  bash scripts/sandbox-run.sh "$dir" true >/dev/null 2>&1
+  status=$?
+  if [[ "$want" == not64 && "$status" != 64 ]] || [[ "$status" == "$want" ]]; then ok "$name"
+  else bad "$name" "exit $status, wanted $want"
+  fi
+}
+sandbox_case "the project root is refused"         .            64
+sandbox_case "scripts/ is refused"                 scripts      64
+sandbox_case "/tmp is refused"                     /tmp         64
+sandbox_case "work/ itself is refused"             work         64
+mkdir -p work/_sandbox-test
+sandbox_case "a clone under work/ is accepted"     work/_sandbox-test not64
+rmdir work/_sandbox-test
+
 echo "guard.sh - commands the first real run needed (reports/guard.log)"
 guard_case "; inside quotes is not a separator"    'grep -n "a;b" work/x/a.py'                                  allow
 guard_case "| inside a jq filter"                  'jq "[.criteria[] | {id, status}]" reports/x/verdict.json'   allow
