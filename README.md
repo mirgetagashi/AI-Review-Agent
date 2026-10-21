@@ -23,8 +23,6 @@ The system clones the project, analyzes it with deterministic tools, grades it a
 - [Security](#security)
 - [Project structure](#project-structure)
 - [Tests](#tests)
-- [Limitations](#limitations)
-- [Team](#team)
 
 ---
 
@@ -343,15 +341,3 @@ The guard tests include the bypasses that defeated the original denylist, so a r
 
 ---
 
-## Limitations
-
-- **Python-centric.** `ruff` and the sandbox image target Python; other languages get weaker quality analysis and execution support.
-- **External libraries in sandbox.** Without internet, libraries like `numpy` can't be installed at runtime; projects that need them are marked `UNVERIFIABLE` until a pre-built image with them is used.
-- **Programs requiring keyboard input** don't receive it in the sandbox.
-- **History can be rewritten.** If the student force-pushes to erase history, the history check has nothing to see; only the `drastic_history` signal remains.
-- **Commit dates can be forged.** GitHub facts (`fork`, `created_at`) are more trustworthy.
-- **AI-generated code** is not reliably detectable and the system does not claim to detect it.
-- **Agents are not deterministic.** `score.py` always gives the same result for the same input, but the same repo graded twice may get slightly different scores from the agents.
-- **`guard.sh` is defense in depth**, not the security boundary; the sandbox is.
-
----
