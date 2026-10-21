@@ -1,0 +1,10 @@
+# Project-owned gitleaks config for the AI Review Agent.
+#
+# Why this exists: gitleaks reads .gitleaks.toml / .gitleaksignore from the
+# directory it scans. If the student's repo ships one, it could silently
+# whitelist the very secret we are looking for. The reviewer always passes
+# --config config/gitleaks.toml so OUR rules apply, not the student's.
+#
+# This extends the default rule set rather than replacing it.
+[extend]
+useDefault = true

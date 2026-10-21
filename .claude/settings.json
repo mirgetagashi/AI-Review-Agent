@@ -1,0 +1,31 @@
+{
+  "$comment": "Security for the AI Review Agent. The guard hook vets every Bash command; the deny rules make the system's own files read-only to the agents so a manipulated agent cannot rewrite the rubric, the scorer or the guard, and cannot edit the student's clone under work/.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/guard.sh\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Edit(scripts/**)",
+      "Edit(schemas/**)",
+      "Edit(config/**)",
+      "Edit(.claude/**)",
+      "Edit(rubric.json)",
+      "Edit(rubric.md)",
+      "Edit(CLAUDE.md)",
+      "Edit(tests/**)",
+      "Edit(work/**)",
+      "Read(.env)",
+      "Read(**/.env)"
+    ]
+  }
+}

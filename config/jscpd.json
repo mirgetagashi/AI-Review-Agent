@@ -1,0 +1,15 @@
+{
+  "$comment": "Project-owned jscpd config. The reviewer passes --config config/jscpd.json so a .jscpd.json shipped in the student repo cannot silently exclude files from the duplication check.",
+  "minTokens": 50,
+  "reporters": ["json"],
+  "absolute": true,
+  "gitignore": false,
+  "ignore": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/build/**"
+  ]
+}
