@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-review-agent/review.schema.json",
+  "title": "Reviewer report (machine form)",
+  "description": "Contract for reports/<repo>/review.json. The point of this schema is COMPLETENESS: all eight rubric criteria must be present, so a criterion the Reviewer silently skipped becomes a schema failure instead of an invisible gap the Professor cannot detect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "repo", "commit", "criteria", "findings", "flags", "proposed_total"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "repo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+      "description": "owner/repo as taken from the GitHub URL"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$",
+      "description": "HEAD of the graded clone. The Professor MUST verify its worktree is at this commit before confirming anything."
+    },
+    "clone_path": {
+      "type": "string",
+      "description": "Path of the clone the Reviewer analysed, so the Professor can re-run cited commands against the same snapshot."
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/criterion" },
+      "$comment": "One contains clause per rubric criterion. This is what makes an omitted criterion a schema error rather than a silent gap.",
+      "allOf": [
+        { "contains": { "properties": { "id": { "const": "functionality" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "structure" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "code_quality" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "tests" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "documentation" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "git_process" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "security" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "originality" } }, "required": ["id"] } }
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "proposed_total": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Reviewer's own sum. score.py recomputes it and FAILS on mismatch; it is kept only to catch arithmetic drift."
+    }
+  },
+  "$defs": {
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "points", "max", "reason", "evidence"],
+      "properties": {
+        "id": {
+          "enum": ["functionality", "structure", "code_quality", "tests", "documentation", "git_process", "security", "originality"]
+        },
+        "level": { "enum": ["missing", "partial", "complete"] },
+        "points": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "max": { "type": "integer", "enum": [10, 15, 20] },
+        "reason": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "id": { "const": "functionality" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 20 } } } },
+        { "if": { "properties": { "id": { "const": "structure" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 15 } } } },
+        { "if": { "properties": { "id": { "const": "code_quality" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 15 } } } },
+        { "if": { "properties": { "id": { "const": "tests" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 10 } } } },
+        { "if": { "properties": { "id": { "const": "documentation" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 10 } } } },
+        { "if": { "properties": { "id": { "const": "git_process" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 10 } } } },
+        { "if": { "properties": { "id": { "const": "security" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 10 } } } },
+        { "if": { "properties": { "id": { "const": "originality" } }, "required": ["id"] }, "then": { "properties": { "max": { "const": 10 } } } },
+        { "if": { "properties": { "level": { "enum": ["partial", "complete"] } }, "required": ["level"] }, "then": { "properties": { "evidence": { "minItems": 1 } } } },
+        { "if": { "properties": { "level": { "const": "missing" } }, "required": ["level"] }, "then": { "properties": { "points": { "const": 0 } } } }
+      ]
+    },
+    "evidence": {
+      "description": "Rule 5.3 - no points without evidence. Every item must be independently re-checkable by the Professor.",
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": ["type", "file", "line"],
+          "properties": {
+            "type": { "const": "file" },
+            "file": { "type": "string", "minLength": 1 },
+            "line": { "type": "integer", "minimum": 1 },
+            "quote": { "type": "string", "maxLength": 500 }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["type", "commit"],
+          "properties": {
+            "type": { "const": "commit" },
+            "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+            "file": { "type": "string" },
+            "note": { "type": "string", "maxLength": 300 }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["type", "cmd", "output"],
+          "properties": {
+            "type": { "const": "command" },
+            "cmd": { "type": "string", "minLength": 1 },
+            "output": { "type": "string", "maxLength": 4000 },
+            "exit_status": { "type": "integer" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["type", "url"],
+          "properties": {
+            "type": { "const": "url" },
+            "url": { "type": "string", "pattern": "^https://" },
+            "note": { "type": "string", "maxLength": 300 }
+          }
+        }
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "required": ["type", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["secret", "originality_match", "copied_then_disguised", "injection_attempt", "drastic_history"],
+          "description": "Drives the special rules in rubric.json. Any other value is rejected so a typo cannot silently disable a penalty."
+        },
+        "severity": { "enum": ["info", "warning", "critical"] },
+        "summary": { "type": "string", "minLength": 5, "maxLength": 300 },
+        "rule": { "type": "string" },
+        "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } }
+      }
+    }
+  }
+}

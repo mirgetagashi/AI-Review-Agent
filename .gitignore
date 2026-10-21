@@ -1,0 +1,4 @@
+.venv-dev/
+work/
+reports/
+__pycache__/
