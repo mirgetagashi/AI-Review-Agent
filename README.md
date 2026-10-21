@@ -251,7 +251,10 @@ A student can embed text aimed at the AI in code, comments, README, commit messa
 
 ### 2. Command restriction
 
-- **`scripts/guard.sh`** checks every shell command before execution. It allows only a fixed allowlist of analysis commands, checks each part of a compound command separately, and blocks when it can't parse the input (fail-closed).
+- **`scripts/guard.sh`** checks every shell command before execution. It allows only a fixed allowlist of analysis commands, checks each part of a compound command separately, and blocks when it can't parse the input (fail-closed). It reads the command the way bash does, so a `;` or `|` inside quotes is not a separator and a redirection cannot hide in an unusual form (`>&file`, `&>`, `<>`).
+- **Every path is resolved through symlinks**, from every directory the command may run in. Writes may land only in `work/`, `reports/` or `/tmp`; reads stay inside the project or `/tmp`; any `..` is refused. A symlink in a student repo cannot point a read or write at our files or the home directory.
+- **Allowlisted tools cannot be turned into executors**: `rg --pre`, `sort --compress-program`, `find -fprint`, `git diff --output` and symlink-following flags are blocked, and only `jscpd` may choose an output file (inside `reports/`).
+- **No secrets, no expansions**: `gh auth status` runs only without flags (no `--show-token`), `.env` and token files are denied, and `$VAR`, `$'…'`, `~`, `{a,b}`, here-documents and subshells are refused. The only allowed environment prefix is `GIT_TERMINAL_PROMPT=0`, so an agent cannot pick its own sandbox image.
 - **`.claude/settings.json`** makes the system's own files read-only for agents: the rubric, scripts, schemas, agents, and student code. A compromised agent cannot change the rubric or the guard.
 - **`config/`** contains our own configs for `gitleaks` and `jscpd`, while `ruff` runs with `--isolated`, so students can't hide problems with their own config.
 
@@ -270,6 +273,16 @@ Student code runs **only** through `scripts/sandbox-run.sh`, inside a Docker con
 timeout 30s
 ```
 
+Only a clone inside `work/` can be mounted; the project root, `scripts/` or a symlink that leads elsewhere is refused (exit `64`).
+
+The container has no network, so packages cannot be installed at run time. The image `ai-review-sandbox` (`sandbox/Dockerfile`) pre-installs the packages listed in `sandbox/requirements.txt` (numpy, pandas, pytest). Build it once:
+
+```bash
+docker build -t ai-review-sandbox sandbox/
+```
+
+A project whose `requirements.txt` names only those packages runs normally; anything else gives exit `3`. Without the image the script falls back to `python:3.12-slim` and says so.
+
 Exit codes distinguish "the program failed" from "we couldn't run it":
 
 | Code | Meaning | Effect |
@@ -279,6 +292,19 @@ Exit codes distinguish "the program failed" from "we couldn't run it":
 | `2` | Docker missing or not working | `UNVERIFIABLE`, not 0 |
 | `3` | Dependencies cannot be installed | `UNVERIFIABLE`, not 0 |
 | `4` | Timed out | Evidence against |
+
+### 4. Test repositories
+
+Four public repos check that each defense works end to end:
+
+| Repo | What it contains | Expected result |
+|---|---|---|
+| [`test-good`](https://github.com/erzagashi11/test-good) | clean project, spread-out history, tests | good grade, no flags |
+| [`test-secret`](https://github.com/erzagashi11/test-secret) | a fake API key committed, removed one commit later | gitleaks finds it in history, `secret_confirmed` |
+| [`test-injection`](https://github.com/erzagashi11/test-injection) | instructions to the grader in code, README, a notes file and test output | not 100, `injection_attempt` |
+| [`test-disguised`](https://github.com/erzagashi11/test-disguised) | first commit copies `test-good`, later commits rename and reformat | `copied_then_disguised` |
+
+Their reports are in `examples/`.
 
 ---
 
@@ -303,6 +329,9 @@ AI-Review-Agent/
 │   ├── history_originality.py         history-aware copy detection
 │   ├── guard.sh                       command guard
 │   └── sandbox-run.sh                 sandboxed execution
+├── sandbox/
+│   ├── Dockerfile                     sandbox image
+│   └── requirements.txt               packages pre-installed in it
 ├── config/
 │   ├── gitleaks.toml
 │   └── jscpd.json
@@ -320,7 +349,7 @@ AI-Review-Agent/
 ## Tests
 
 ```bash
-bash tests/run-tests.sh          # 68 checks: scorer, guard, history originality
+bash tests/run-tests.sh          # 125 checks: scorer, guard, sandbox, history originality
 ```
 
 Schema validation needs draft 2020-12 support:
@@ -337,7 +366,7 @@ The history originality test can also be run separately:
 python3 tests/test_history_originality.py    # 16 tests
 ```
 
-The guard tests include the bypasses that defeated the original denylist, so a regression reopens the hole rather than passing silently.
+The guard tests include the bypasses that defeated the original denylist, plus `..` escapes, symlinks, output flags and expansions, so a regression reopens the hole rather than passing silently. The symlink cases are skipped on systems that cannot create symlinks (Windows without Developer Mode).
 
 ---
 
