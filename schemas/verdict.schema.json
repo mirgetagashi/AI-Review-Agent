@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-review-agent/verdict.schema.json",
+  "title": "Professor verdict (machine form)",
+  "description": "Contract for reports/<repo>/verdict.json. The Professor decides STATUSES; it never computes the total - scripts/score.py does. All eight criteria must carry a status, so a criterion the Professor skipped cannot pass as verified.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "repo", "commit", "criteria"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "repo": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$",
+      "description": "MUST equal review.json.commit. score.py fails on mismatch: verifying a different snapshot than the one graded is not verification."
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/verdictCriterion" },
+      "allOf": [
+        { "contains": { "properties": { "id": { "const": "functionality" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "structure" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "code_quality" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "tests" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "documentation" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "git_process" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "security" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "originality" } }, "required": ["id"] } }
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "description": "The Reviewer's findings after verification. Only CONFIRMED findings trigger the special rules in rubric.json.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "status"],
+        "properties": {
+          "type": { "enum": ["secret", "originality_match", "copied_then_disguised", "injection_attempt", "drastic_history"] },
+          "status": { "$ref": "#/$defs/status" },
+          "note": { "type": "string", "maxLength": 300 }
+        }
+      }
+    },
+    "independent_checks": {
+      "type": "array",
+      "description": "Checks the Professor ran that the Reviewer did NOT cite. This is the only defence against false negatives - a criterion the Reviewer never examined produces no claim to verify.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cmd", "agrees_with_report"],
+        "properties": {
+          "cmd": { "type": "string", "minLength": 1 },
+          "output": { "type": "string", "maxLength": 4000 },
+          "agrees_with_report": { "type": "boolean" },
+          "note": { "type": "string", "maxLength": 300 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "status": {
+      "enum": ["CONFIRMED", "CORRECTED", "REJECTED", "UNVERIFIABLE"],
+      "description": "CONFIRMED: evidence exists and supports the claim. CORRECTED: the fact exists but was misread. REJECTED: the evidence does not exist or says the opposite. UNVERIFIABLE: cannot be checked (e.g. needs a forbidden execution)."
+    },
+    "verdictCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "reason", "claims"],
+      "properties": {
+        "id": {
+          "enum": ["functionality", "structure", "code_quality", "tests", "documentation", "git_process", "security", "originality"]
+        },
+        "status": { "$ref": "#/$defs/status" },
+        "corrected_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "Required for CORRECTED and REJECTED - the Professor must state the rubric-correct score, not merely that the Reviewer was wrong. Forbidden for CONFIRMED (points stand) and for UNVERIFIABLE (forced to 0)."
+        },
+        "reason": { "type": "string", "minLength": 10, "maxLength": 400 },
+        "claims": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Per-evidence-item outcome, in the same order as review.json evidence for this criterion. Kept for the audit trail; the criterion status drives the score.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref", "status"],
+            "properties": {
+              "ref": { "type": "string", "minLength": 1, "description": "file:line, commit hash, command or URL as cited by the Reviewer" },
+              "status": { "$ref": "#/$defs/status" },
+              "checked_with": { "type": "string", "description": "What the Professor actually did to check it" },
+              "note": { "type": "string", "maxLength": 300 }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "enum": ["CORRECTED", "REJECTED"] } }, "required": ["status"] },
+          "then": { "required": ["corrected_points"] }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["CONFIRMED", "UNVERIFIABLE"] } }, "required": ["status"] },
+          "then": { "not": { "required": ["corrected_points"] } }
+        }
+      ]
+    }
+  }
+}

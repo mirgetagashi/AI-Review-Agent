@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "repo": "studenti/detyra-sudoku",
+  "commit": "9f3a1c2",
+  "criteria": [
+    {
+      "id": "functionality",
+      "status": "UNVERIFIABLE",
+      "reason": "Docker unavailable, execution forbidden, cannot confirm.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "UNVERIFIABLE",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "status": "UNVERIFIABLE",
+      "reason": "Cited line does not exist at the graded commit.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "UNVERIFIABLE",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "code_quality",
+      "status": "UNVERIFIABLE",
+      "reason": "ruff output not reproducible, version not recorded.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "UNVERIFIABLE",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "CONFIRMED",
+      "reason": "Checked against the cited evidence.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "CONFIRMED",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "UNVERIFIABLE",
+      "reason": "Cited README section missing at this commit.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "UNVERIFIABLE",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "git_process",
+      "status": "CONFIRMED",
+      "reason": "Checked against the cited evidence.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "CONFIRMED",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "status": "CONFIRMED",
+      "reason": "Checked against the cited evidence.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "CONFIRMED",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    },
+    {
+      "id": "originality",
+      "status": "CONFIRMED",
+      "reason": "Checked against the cited evidence.",
+      "claims": [
+        {
+          "ref": "as cited in review.json",
+          "status": "CONFIRMED",
+          "checked_with": "re-opened the file / re-ran the command"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "version": "1.0",
+  "total": 100,
+  "comment": [
+    "Machine-readable form of rubric.md. rubric.md stays the human-facing law;",
+    "this file is the single source of truth for the NUMBERS, so that weights and",
+    "level bands are never re-derived by a language model.",
+    "Bands are contiguous and exhaustive over 0..max: missing=0,",
+    "partial=[partial_min..complete_min-1], complete=[complete_min..max].",
+    "complete_min = round(0.8*max), partial_min = round(0.4*max)."
+  ],
+  "criteria": [
+    {
+      "id": "functionality",
+      "title": "Funksionaliteti",
+      "max": 20,
+      "bands": { "missing": [0, 0], "partial": [8, 15], "complete": [16, 20] },
+      "requires_execution": true,
+      "evidence_types": ["command", "file"]
+    },
+    {
+      "id": "structure",
+      "title": "Struktura dhe arkitektura",
+      "max": 15,
+      "bands": { "missing": [0, 0], "partial": [6, 11], "complete": [12, 15] },
+      "requires_execution": false,
+      "evidence_types": ["file", "command"]
+    },
+    {
+      "id": "code_quality",
+      "title": "Kualiteti i kodit",
+      "max": 15,
+      "bands": { "missing": [0, 0], "partial": [6, 11], "complete": [12, 15] },
+      "requires_execution": false,
+      "evidence_types": ["command", "file"]
+    },
+    {
+      "id": "tests",
+      "title": "Testet",
+      "max": 10,
+      "bands": { "missing": [0, 0], "partial": [4, 7], "complete": [8, 10] },
+      "requires_execution": false,
+      "evidence_types": ["file", "command"]
+    },
+    {
+      "id": "documentation",
+      "title": "Dokumentimi",
+      "max": 10,
+      "bands": { "missing": [0, 0], "partial": [4, 7], "complete": [8, 10] },
+      "requires_execution": false,
+      "evidence_types": ["file"]
+    },
+    {
+      "id": "git_process",
+      "title": "Procesi ne git",
+      "max": 10,
+      "bands": { "missing": [0, 0], "partial": [4, 7], "complete": [8, 10] },
+      "requires_execution": false,
+      "evidence_types": ["command", "commit"]
+    },
+    {
+      "id": "security",
+      "title": "Siguria",
+      "max": 10,
+      "bands": { "missing": [0, 0], "partial": [4, 7], "complete": [8, 10] },
+      "requires_execution": false,
+      "evidence_types": ["command", "file", "commit"]
+    },
+    {
+      "id": "originality",
+      "title": "Origjinaliteti",
+      "max": 10,
+      "bands": { "missing": [0, 0], "partial": [4, 7], "complete": [8, 10] },
+      "requires_execution": false,
+      "evidence_types": ["url", "command", "file"]
+    }
+  ],
+  "grade_scale": [
+    { "min": 91, "max": 100, "grade": 10 },
+    { "min": 81, "max": 90, "grade": 9 },
+    { "min": 71, "max": 80, "grade": 8 },
+    { "min": 61, "max": 70, "grade": 7 },
+    { "min": 51, "max": 60, "grade": 6 },
+    { "min": 0, "max": 50, "grade": 5 }
+  ],
+  "special_rules": {
+    "secret_confirmed_zeroes_security": true,
+    "originality_match_is_flag_only": true,
+    "disguised_copy_is_flag_only": true,
+    "injection_attempt_is_flag_only": true,
+    "large_delta_threshold": 15,
+    "max_unverifiable_claims": 3
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0",
+  "repo": "studenti/detyra-sudoku",
+  "commit": "9f3a1c2",
+  "clone_path": "work/detyra-sudoku",
+  "criteria": [
+    {
+      "id": "functionality",
+      "level": "complete",
+      "points": 16,
+      "max": 20,
+      "reason": "Solver runs in the sandbox and solves the three bundled puzzles.",
+      "evidence": [
+        {
+          "type": "command",
+          "cmd": "bash scripts/sandbox-run.sh work/detyra-sudoku python main.py",
+          "output": "solved 3/3 puzzles in 0.42s",
+          "exit_status": 0
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "level": "partial",
+      "points": 11,
+      "max": 15,
+      "reason": "Modules are separated but solver.py mixes I/O with the algorithm.",
+      "evidence": [
+        {
+          "type": "file",
+          "file": "solver.py",
+          "line": 42,
+          "quote": "print(f\"trying {row},{col}\")"
+        }
+      ]
+    },
+    {
+      "id": "code_quality",
+      "level": "partial",
+      "points": 11,
+      "max": 15,
+      "reason": "Ruff reports 9 issues, none blocking; one duplicated block of 24 lines.",
+      "evidence": [
+        {
+          "type": "command",
+          "cmd": "ruff check work/detyra-sudoku",
+          "output": "Found 9 errors.",
+          "exit_status": 1
+        },
+        {
+          "type": "command",
+          "cmd": "jscpd work/detyra-sudoku --reporters json",
+          "output": "{\"clones\": 1, \"lines\": 24}",
+          "exit_status": 0
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "level": "missing",
+      "points": 0,
+      "max": 10,
+      "reason": "No test files found anywhere in the repository.",
+      "evidence": [
+        {
+          "type": "command",
+          "cmd": "find work/detyra-sudoku -name 'test_*.py'",
+          "output": "",
+          "exit_status": 0
+        }
+      ]
+    },
+    {
+      "id": "documentation",
+      "level": "complete",
+      "points": 8,
+      "max": 10,
+      "reason": "README covers install and usage; no architecture section.",
+      "evidence": []
+    },
+    {
+      "id": "git_process",
+      "level": "complete",
+      "points": 8,
+      "max": 10,
+      "reason": "23 commits spread over three weeks with descriptive messages.",
+      "evidence": [
+        {
+          "type": "command",
+          "cmd": "git -C work/detyra-sudoku log --format=%ad --date=short",
+          "output": "2026-09-28\n2026-09-30\n2026-10-14",
+          "exit_status": 0
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "level": "complete",
+      "points": 10,
+      "max": 10,
+      "reason": "No secrets detected in the working tree or the full history.",
+      "evidence": [
+        {
+          "type": "command",
+          "cmd": "gitleaks detect --redact --source work/detyra-sudoku",
+          "output": "no leaks found",
+          "exit_status": 0
+        }
+      ]
+    },
+    {
+      "id": "originality",
+      "level": "complete",
+      "points": 10,
+      "max": 10,
+      "reason": "No verbatim matches for the four sampled snippets.",
+      "evidence": [
+        {
+          "type": "command",
+          "cmd": "gh search code --limit 5 \"def backtrack(self, board)\"",
+          "output": "0 results",
+          "exit_status": 0
+        }
+      ]
+    }
+  ],
+  "findings": [],
+  "flags": [],
+  "proposed_total": 74
+}
